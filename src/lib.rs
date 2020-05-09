@@ -69,12 +69,66 @@ impl Spline {
         }
     }
 
+    fn with_second_derivatives(points: Vec<(f64, f64)>, d0: f64, dn: f64) -> Self {
+        let n = points.len();
+        let points_x: Vec<f64> = points.iter().map(|&(x, _)| x).collect();
+        let points_y: Vec<f64> = points.iter().map(|&(_, y)| y).collect();
+        let h: Vec<f64> = points_x.windows(2).map(|w| w[1] - w[0]).collect();
+
+        let a: Vec<f64> = iter::once(0.0)
+            .chain(h.windows(2).map(|w| w[0] / (w[0] + w[1])))
+            .chain(iter::once(0.0))
+            .collect();
+        let b: Vec<f64> = iter::repeat(2.0).take(points_x.len()).collect();
+        let c: Vec<f64> = iter::once(0.0)
+            .chain(h.windows(2).map(|w| w[1] / (w[0] + w[1])))
+            .chain(iter::once(0.0))
+            .collect();
+        let d: Vec<f64> = iter::once(2.0 * d0)
+            .chain(
+                points
+                    .windows(3)
+                    .map(|w| 6.0 * div_diff_3(w[0], w[1], w[2])),
+            )
+            .chain(iter::once(2.0 * dn))
+            .collect();
+        let second_derivatives = solve_tridiagonal(a, b, c, d);
+        let splines: Vec<_> = (0..n - 1)
+            .map(|i| {
+                let hi = h[i];
+                let mi = second_derivatives[i];
+                let mi1 = second_derivatives[i + 1];
+                let yi = points_y[i];
+                let yi1 = points_y[i + 1];
+                let poly1 =
+                    CubicPoly::new(-mi / 6.0 / hi, 0.0, -(yi - mi * hi * hi / 6.0) / hi, 0.0)
+                        .shifted(points_x[i + 1]);
+                let poly2 =
+                    CubicPoly::new(mi1 / 6.0 / hi, 0.0, (yi1 - mi1 * hi * hi / 6.0) / hi, 0.0)
+                        .shifted(points_x[i]);
+                poly1 + poly2
+            })
+            .collect();
+        let x0 = points_x[0];
+        let xn = points_x[n - 1];
+        let d0 = splines[0].derivative(x0);
+        let dn = splines[n - 2].derivative(xn);
+        Self {
+            points_x,
+            splines,
+            derivative_start: d0,
+            derivative_end: dn,
+        }
+    }
+
     pub fn new(mut points: Vec<(f64, f64)>, boundary_condition: BoundaryCondition) -> Self {
         points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
         match boundary_condition {
             BoundaryCondition::Derivatives(d0, dn) => Self::with_derivatives(points, d0, dn),
-            BoundaryCondition::SecondDerivatives(_d0, _dn) => unimplemented!(),
-            BoundaryCondition::Natural => unimplemented!(),
+            BoundaryCondition::SecondDerivatives(d0, dn) => {
+                Self::with_second_derivatives(points, d0, dn)
+            }
+            BoundaryCondition::Natural => Self::with_second_derivatives(points, 0.0, 0.0),
             BoundaryCondition::Periodic => unimplemented!(),
         }
     }

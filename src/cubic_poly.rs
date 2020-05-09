@@ -25,6 +25,10 @@ impl CubicPoly {
     pub fn eval(&self, x: f64) -> f64 {
         self.a * x * x * x + self.b * x * x + self.c * x + self.d
     }
+
+    pub fn derivative(&self, x: f64) -> f64 {
+        3.0 * self.a * x * x + 2.0 * self.b * x + self.c
+    }
 }
 
 impl ops::AddAssign<CubicPoly> for CubicPoly {
