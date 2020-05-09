@@ -48,6 +48,34 @@ impl Spline {
             derivative_end: 0.0,
         }
     }
+
+    pub fn eval(&self, x: f64) -> f64 {
+        let index = self
+            .points_x
+            .binary_search_by(|probe| probe.partial_cmp(&x).unwrap());
+        match index {
+            Ok(i) => {
+                if i < self.splines.len() {
+                    self.splines[i].eval(x)
+                } else {
+                    self.splines[i - 1].eval(x)
+                }
+            }
+            Err(i) => {
+                if i == 0 {
+                    let x0 = self.points_x[0];
+                    let y0 = self.splines[0].eval(x0);
+                    y0 + self.derivative_start * (x - x0)
+                } else if i == self.points_x.len() {
+                    let xn = self.points_x[self.points_x.len() - 1];
+                    let yn = self.splines[self.splines.len() - 1].eval(xn);
+                    yn + self.derivative_end * (x - xn)
+                } else {
+                    self.splines[i - 1].eval(x)
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
