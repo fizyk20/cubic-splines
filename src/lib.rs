@@ -195,20 +195,3 @@ fn solve_tridiagonal(a: Vec<f64>, mut b: Vec<f64>, c: Vec<f64>, mut d: Vec<f64>)
     result.reverse();
     result
 }
-
-#[cfg(test)]
-mod tests {
-    use super::CubicPoly;
-
-    #[test]
-    fn test_poly_shift() {
-        let poly = CubicPoly::new(1.0, -1.0, 1.0, -1.0);
-        assert_eq!(poly.eval(0.0), -1.0);
-        assert_eq!(poly.eval(1.0), 0.0);
-        assert_eq!(poly.eval(2.0), 5.0);
-        let poly2 = poly.shifted(1.0); // poly2(x) = poly(x - 1)
-        assert_eq!(poly2.eval(1.0), -1.0);
-        assert_eq!(poly2.eval(2.0), 0.0);
-        assert_eq!(poly2.eval(3.0), 5.0);
-    }
-}
