@@ -194,6 +194,21 @@ impl Spline {
             }
         }
     }
+
+    pub fn derivative_start(&self) -> f64 {
+        self.derivative_start
+    }
+
+    pub fn derivative_end(&self) -> f64 {
+        self.derivative_end
+    }
+
+    pub fn polynomials<'a>(&'a self) -> impl Iterator<Item = (f64, f64, CubicPoly)> + 'a {
+        self.points_x
+            .windows(2)
+            .zip(self.splines.iter())
+            .map(|(xs, poly)| (xs[0], xs[1], *poly))
+    }
 }
 
 fn div_diff_2((x0, y0): (f64, f64), (x1, y1): (f64, f64)) -> f64 {
