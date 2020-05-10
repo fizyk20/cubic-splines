@@ -3,13 +3,20 @@ mod cubic_poly;
 pub use cubic_poly::CubicPoly;
 use std::iter;
 
+/// Represents boundary conditions to be used for fitting a spline
 pub enum BoundaryCondition {
+    /// Set derivatives at the initial and final points
     Derivatives(f64, f64),
+    /// Set second derivatives at the initial and final points
     SecondDerivatives(f64, f64),
+    /// Second derivatives at initial and final points set to 0
+    /// (equivalent to SecondDerivatives(0.0, 0.0))
     Natural,
+    /// fit a periodic function
     Periodic,
 }
 
+/// A result of interpolation between a set of points
 #[derive(Clone, Debug)]
 pub struct Spline {
     points_x: Vec<f64>,
@@ -121,6 +128,8 @@ impl Spline {
         }
     }
 
+    /// Creates a new interpolated function fit to a set of given points with the given boundary
+    /// conditions
     pub fn new(mut points: Vec<(f64, f64)>, boundary_condition: BoundaryCondition) -> Self {
         points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
         match boundary_condition {
@@ -133,6 +142,7 @@ impl Spline {
         }
     }
 
+    /// Evaluates the interpolated function at a given point
     pub fn eval(&self, x: f64) -> f64 {
         let index = self
             .points_x
