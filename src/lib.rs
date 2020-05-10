@@ -170,6 +170,30 @@ impl Spline {
             }
         }
     }
+
+    pub fn eval_derivative(&self, x: f64) -> f64 {
+        let index = self
+            .points_x
+            .binary_search_by(|probe| probe.partial_cmp(&x).unwrap());
+        match index {
+            Ok(i) => {
+                if i < self.splines.len() {
+                    self.splines[i].derivative(x)
+                } else {
+                    self.splines[i - 1].derivative(x)
+                }
+            }
+            Err(i) => {
+                if i == 0 {
+                    self.derivative_start
+                } else if i == self.points_x.len() {
+                    self.derivative_end
+                } else {
+                    self.splines[i - 1].derivative(x)
+                }
+            }
+        }
+    }
 }
 
 fn div_diff_2((x0, y0): (f64, f64), (x1, y1): (f64, f64)) -> f64 {
