@@ -138,6 +138,54 @@ where
     }
 }
 
+impl<T> ops::MulAssign<f64> for CubicPoly<T>
+where
+    T: ops::MulAssign<f64>,
+{
+    fn mul_assign(&mut self, other: f64) {
+        self.a *= other;
+        self.b *= other;
+        self.c *= other;
+        self.d *= other;
+    }
+}
+
+impl<T> ops::Mul<f64> for CubicPoly<T>
+where
+    T: ops::MulAssign<f64>,
+{
+    type Output = CubicPoly<T>;
+
+    fn mul(mut self, other: f64) -> CubicPoly<T> {
+        self *= other;
+        self
+    }
+}
+
+impl<T> ops::DivAssign<f64> for CubicPoly<T>
+where
+    T: ops::DivAssign<f64>,
+{
+    fn div_assign(&mut self, other: f64) {
+        self.a /= other;
+        self.b /= other;
+        self.c /= other;
+        self.d /= other;
+    }
+}
+
+impl<T> ops::Div<f64> for CubicPoly<T>
+where
+    T: ops::DivAssign<f64>,
+{
+    type Output = CubicPoly<T>;
+
+    fn div(mut self, other: f64) -> CubicPoly<T> {
+        self /= other;
+        self
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::{CubicPoly, Factors};
