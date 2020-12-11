@@ -279,3 +279,61 @@ where
     result.reverse();
     result
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{BoundaryCondition, CubicPoly, Spline};
+
+    #[test]
+    fn test_spline_with_derivatives() {
+        let points = vec![
+            (0.0, 0.0),
+            (1.0, 6.0),
+            (1.2, 6.0),
+            (1.4, 6.0),
+            (1.6, 6.0),
+            (2.0, 1.0),
+            (3.0, 2.0),
+            (4.0, -1.0),
+        ];
+        let spline = Spline::new(points, BoundaryCondition::Natural);
+        for i in -20..220 {
+            let x = (i as f64) / 200.0 * 4.0;
+            println!("{} {}", x, spline.eval(x));
+        }
+    }
+
+    #[test]
+    fn test_atmosphere() {
+        let points = vec![
+            (0.0, 8.6),
+            (12.5, 10.4),
+            (19.4, 8.9),
+            (24.0, 11.7),
+            (34.0, 17.5),
+        ];
+        let spline = Spline::new(points, BoundaryCondition::Derivatives(-0.0065, -0.0065));
+        println!("{:?}", spline);
+        for i in -20..240 {
+            let x = (i as f64) * 0.5;
+            println!("{} {}", x, spline.eval(x));
+        }
+    }
+
+    #[test]
+    fn test_spline_of_polynomials() {
+        let points = vec![
+            (0.0, CubicPoly::new(1.0, 0.0, -1.0, 0.0)),
+            (1.0, CubicPoly::new(2.0, -0.5, -3.0, 2.4)),
+            (2.0, CubicPoly::new(3.0, -1.5, 1.0, -1.2)),
+            (3.0, CubicPoly::new(2.0, 1.5, 2.0, 1.5)),
+            (4.0, CubicPoly::new(1.0, 3.0, -3.0, -2.0)),
+        ];
+        let spline = Spline::new(points, BoundaryCondition::Natural);
+        for i in -10..110 {
+            let x = (i as f64) / 100.0 * 4.0;
+            let y = 8.0;
+            println!("{} {} {}", x, y, spline.eval(x).eval(y));
+        }
+    }
+}
