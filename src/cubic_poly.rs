@@ -2,11 +2,11 @@ use roots::{find_roots_cubic, Roots};
 use std::ops;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub struct CubicPoly {
-    a: f64,
-    b: f64,
-    c: f64,
-    d: f64,
+pub struct CubicPoly<T> {
+    a: T,
+    b: T,
+    c: T,
+    d: T,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -17,28 +17,38 @@ pub enum Factors {
     LinearAndQuadratic { a: f64, x1: f64, b: f64, c: f64 },
 }
 
-impl CubicPoly {
-    pub fn new(a: f64, b: f64, c: f64, d: f64) -> Self {
+impl<T> CubicPoly<T>
+where
+    T: ops::Add<T, Output = T>
+        + ops::AddAssign<T>
+        + ops::Sub<T, Output = T>
+        + ops::SubAssign<T>
+        + ops::Mul<f64, Output = T>
+        + Copy,
+{
+    pub fn new(a: T, b: T, c: T, d: T) -> Self {
         Self { a, b, c, d }
     }
 
     /// Creates a polynomial g(x) = f(x-x0), where f(x) = self
     pub fn shifted(self, x0: f64) -> Self {
         let a = self.a;
-        let b = self.b - 3.0 * self.a * x0;
-        let c = self.c + 3.0 * self.a * x0 * x0 - 2.0 * self.b * x0;
+        let b = self.b - self.a * 3.0 * x0;
+        let c = self.c + self.a * 3.0 * x0 * x0 - self.b * 2.0 * x0;
         let d = self.d - self.a * x0 * x0 * x0 + self.b * x0 * x0 - self.c * x0;
         Self { a, b, c, d }
     }
 
-    pub fn eval(&self, x: f64) -> f64 {
+    pub fn eval(&self, x: f64) -> T {
         self.a * x * x * x + self.b * x * x + self.c * x + self.d
     }
 
-    pub fn derivative(&self, x: f64) -> f64 {
-        3.0 * self.a * x * x + 2.0 * self.b * x + self.c
+    pub fn derivative(&self, x: f64) -> T {
+        self.a * 3.0 * x * x + self.b * 2.0 * x + self.c
     }
+}
 
+impl CubicPoly<f64> {
     pub fn factors(&self) -> Factors {
         let roots = find_roots_cubic(self.a, self.b, self.c, self.d);
         match roots {
@@ -80,8 +90,11 @@ impl CubicPoly {
     }
 }
 
-impl ops::AddAssign<CubicPoly> for CubicPoly {
-    fn add_assign(&mut self, other: CubicPoly) {
+impl<T> ops::AddAssign<CubicPoly<T>> for CubicPoly<T>
+where
+    T: ops::AddAssign<T>,
+{
+    fn add_assign(&mut self, other: CubicPoly<T>) {
         self.a += other.a;
         self.b += other.b;
         self.c += other.c;
@@ -89,8 +102,11 @@ impl ops::AddAssign<CubicPoly> for CubicPoly {
     }
 }
 
-impl ops::SubAssign<CubicPoly> for CubicPoly {
-    fn sub_assign(&mut self, other: CubicPoly) {
+impl<T> ops::SubAssign<CubicPoly<T>> for CubicPoly<T>
+where
+    T: ops::SubAssign<T>,
+{
+    fn sub_assign(&mut self, other: CubicPoly<T>) {
         self.a -= other.a;
         self.b -= other.b;
         self.c -= other.c;
@@ -98,19 +114,25 @@ impl ops::SubAssign<CubicPoly> for CubicPoly {
     }
 }
 
-impl ops::Add<CubicPoly> for CubicPoly {
-    type Output = CubicPoly;
+impl<T> ops::Add<CubicPoly<T>> for CubicPoly<T>
+where
+    T: ops::AddAssign<T>,
+{
+    type Output = CubicPoly<T>;
 
-    fn add(mut self, other: CubicPoly) -> CubicPoly {
+    fn add(mut self, other: CubicPoly<T>) -> CubicPoly<T> {
         self += other;
         self
     }
 }
 
-impl ops::Sub<CubicPoly> for CubicPoly {
-    type Output = CubicPoly;
+impl<T> ops::Sub<CubicPoly<T>> for CubicPoly<T>
+where
+    T: ops::SubAssign<T>,
+{
+    type Output = CubicPoly<T>;
 
-    fn sub(mut self, other: CubicPoly) -> CubicPoly {
+    fn sub(mut self, other: CubicPoly<T>) -> CubicPoly<T> {
         self -= other;
         self
     }

@@ -1,14 +1,17 @@
 mod cubic_poly;
+mod zero;
+
+use std::{iter, ops};
 
 pub use cubic_poly::CubicPoly;
-use std::iter;
+pub use zero::Zero;
 
 /// Represents boundary conditions to be used for fitting a spline
-pub enum BoundaryCondition {
+pub enum BoundaryCondition<T> {
     /// Set derivatives at the initial and final points
-    Derivatives(f64, f64),
+    Derivatives(T, T),
     /// Set second derivatives at the initial and final points
-    SecondDerivatives(f64, f64),
+    SecondDerivatives(T, T),
     /// Second derivatives at initial and final points set to 0
     /// (equivalent to SecondDerivatives(0.0, 0.0))
     Natural,
@@ -18,18 +21,28 @@ pub enum BoundaryCondition {
 
 /// A result of interpolation between a set of points
 #[derive(Clone, Debug)]
-pub struct Spline {
+pub struct Spline<T> {
     points_x: Vec<f64>,
-    splines: Vec<CubicPoly>,
-    derivative_start: f64,
-    derivative_end: f64,
+    splines: Vec<CubicPoly<T>>,
+    derivative_start: T,
+    derivative_end: T,
 }
 
-impl Spline {
-    fn with_derivatives(points: Vec<(f64, f64)>, d0: f64, dn: f64) -> Self {
+impl<T> Spline<T>
+where
+    T: ops::Add<T, Output = T>
+        + ops::AddAssign<T>
+        + ops::Sub<T, Output = T>
+        + ops::SubAssign<T>
+        + ops::Mul<f64, Output = T>
+        + ops::Div<f64, Output = T>
+        + Copy
+        + Zero,
+{
+    fn with_derivatives(points: Vec<(f64, T)>, d0: T, dn: T) -> Self {
         let n = points.len();
         let points_x: Vec<f64> = points.iter().map(|&(x, _)| x).collect();
-        let points_y: Vec<f64> = points.iter().map(|&(_, y)| y).collect();
+        let points_y: Vec<T> = points.iter().map(|&(_, y)| y).collect();
         let h: Vec<f64> = points_x.windows(2).map(|w| w[1] - w[0]).collect();
 
         let a: Vec<f64> = iter::once(0.0)
@@ -41,14 +54,14 @@ impl Spline {
             .chain(h.windows(2).map(|w| w[1] / (w[0] + w[1])))
             .chain(iter::once(0.0))
             .collect();
-        let d: Vec<f64> = iter::once(6.0 / h[0] * (div_diff_2(points[0], points[1]) - d0))
+        let d: Vec<T> = iter::once((div_diff_2(points[0], points[1]) - d0) * 6.0 / h[0])
             .chain(
                 points
                     .windows(3)
-                    .map(|w| 6.0 * div_diff_3(w[0], w[1], w[2])),
+                    .map(|w| div_diff_3(w[0], w[1], w[2]) * 6.0),
             )
             .chain(iter::once(
-                6.0 / h[n - 2] * (dn - div_diff_2(points[n - 2], points[n - 1])),
+                (dn - div_diff_2(points[n - 2], points[n - 1])) * 6.0 / h[n - 2],
             ))
             .collect();
         let second_derivatives = solve_tridiagonal(a, b, c, d);
@@ -59,12 +72,20 @@ impl Spline {
                 let mi1 = second_derivatives[i + 1];
                 let yi = points_y[i];
                 let yi1 = points_y[i + 1];
-                let poly1 =
-                    CubicPoly::new(-mi / 6.0 / hi, 0.0, -(yi - mi * hi * hi / 6.0) / hi, 0.0)
-                        .shifted(points_x[i + 1]);
-                let poly2 =
-                    CubicPoly::new(mi1 / 6.0 / hi, 0.0, (yi1 - mi1 * hi * hi / 6.0) / hi, 0.0)
-                        .shifted(points_x[i]);
+                let poly1 = CubicPoly::new(
+                    mi / -6.0 / hi,
+                    T::zero(),
+                    (yi - mi * hi * hi / 6.0) / -hi,
+                    T::zero(),
+                )
+                .shifted(points_x[i + 1]);
+                let poly2 = CubicPoly::new(
+                    mi1 / 6.0 / hi,
+                    T::zero(),
+                    (yi1 - mi1 * hi * hi / 6.0) / hi,
+                    T::zero(),
+                )
+                .shifted(points_x[i]);
                 poly1 + poly2
             })
             .collect();
@@ -76,10 +97,10 @@ impl Spline {
         }
     }
 
-    fn with_second_derivatives(points: Vec<(f64, f64)>, d0: f64, dn: f64) -> Self {
+    fn with_second_derivatives(points: Vec<(f64, T)>, d0: T, dn: T) -> Self {
         let n = points.len();
         let points_x: Vec<f64> = points.iter().map(|&(x, _)| x).collect();
-        let points_y: Vec<f64> = points.iter().map(|&(_, y)| y).collect();
+        let points_y: Vec<T> = points.iter().map(|&(_, y)| y).collect();
         let h: Vec<f64> = points_x.windows(2).map(|w| w[1] - w[0]).collect();
 
         let a: Vec<f64> = iter::once(0.0)
@@ -91,13 +112,13 @@ impl Spline {
             .chain(h.windows(2).map(|w| w[1] / (w[0] + w[1])))
             .chain(iter::once(0.0))
             .collect();
-        let d: Vec<f64> = iter::once(2.0 * d0)
+        let d: Vec<T> = iter::once(d0 * 2.0)
             .chain(
                 points
                     .windows(3)
-                    .map(|w| 6.0 * div_diff_3(w[0], w[1], w[2])),
+                    .map(|w| div_diff_3(w[0], w[1], w[2]) * 6.0),
             )
-            .chain(iter::once(2.0 * dn))
+            .chain(iter::once(dn * 2.0))
             .collect();
         let second_derivatives = solve_tridiagonal(a, b, c, d);
         let splines: Vec<_> = (0..n - 1)
@@ -107,12 +128,20 @@ impl Spline {
                 let mi1 = second_derivatives[i + 1];
                 let yi = points_y[i];
                 let yi1 = points_y[i + 1];
-                let poly1 =
-                    CubicPoly::new(-mi / 6.0 / hi, 0.0, -(yi - mi * hi * hi / 6.0) / hi, 0.0)
-                        .shifted(points_x[i + 1]);
-                let poly2 =
-                    CubicPoly::new(mi1 / 6.0 / hi, 0.0, (yi1 - mi1 * hi * hi / 6.0) / hi, 0.0)
-                        .shifted(points_x[i]);
+                let poly1 = CubicPoly::new(
+                    mi / -6.0 / hi,
+                    T::zero(),
+                    (yi - mi * hi * hi / 6.0) / -hi,
+                    T::zero(),
+                )
+                .shifted(points_x[i + 1]);
+                let poly2 = CubicPoly::new(
+                    mi1 / 6.0 / hi,
+                    T::zero(),
+                    (yi1 - mi1 * hi * hi / 6.0) / hi,
+                    T::zero(),
+                )
+                .shifted(points_x[i]);
                 poly1 + poly2
             })
             .collect();
@@ -130,20 +159,22 @@ impl Spline {
 
     /// Creates a new interpolated function fit to a set of given points with the given boundary
     /// conditions
-    pub fn new(mut points: Vec<(f64, f64)>, boundary_condition: BoundaryCondition) -> Self {
+    pub fn new(mut points: Vec<(f64, T)>, boundary_condition: BoundaryCondition<T>) -> Self {
         points.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
         match boundary_condition {
             BoundaryCondition::Derivatives(d0, dn) => Self::with_derivatives(points, d0, dn),
             BoundaryCondition::SecondDerivatives(d0, dn) => {
                 Self::with_second_derivatives(points, d0, dn)
             }
-            BoundaryCondition::Natural => Self::with_second_derivatives(points, 0.0, 0.0),
+            BoundaryCondition::Natural => {
+                Self::with_second_derivatives(points, T::zero(), T::zero())
+            }
             BoundaryCondition::Periodic => unimplemented!(),
         }
     }
 
     /// Evaluates the interpolated function at a given point
-    pub fn eval(&self, x: f64) -> f64 {
+    pub fn eval(&self, x: f64) -> T {
         let index = self
             .points_x
             .binary_search_by(|probe| probe.partial_cmp(&x).unwrap());
@@ -171,7 +202,7 @@ impl Spline {
         }
     }
 
-    pub fn eval_derivative(&self, x: f64) -> f64 {
+    pub fn eval_derivative(&self, x: f64) -> T {
         let index = self
             .points_x
             .binary_search_by(|probe| probe.partial_cmp(&x).unwrap());
@@ -195,15 +226,15 @@ impl Spline {
         }
     }
 
-    pub fn derivative_start(&self) -> f64 {
+    pub fn derivative_start(&self) -> T {
         self.derivative_start
     }
 
-    pub fn derivative_end(&self) -> f64 {
+    pub fn derivative_end(&self) -> T {
         self.derivative_end
     }
 
-    pub fn polynomials<'a>(&'a self) -> impl Iterator<Item = (f64, f64, CubicPoly)> + 'a {
+    pub fn polynomials<'a>(&'a self) -> impl Iterator<Item = (f64, f64, CubicPoly<T>)> + 'a {
         self.points_x
             .windows(2)
             .zip(self.splines.iter())
@@ -211,25 +242,39 @@ impl Spline {
     }
 }
 
-fn div_diff_2((x0, y0): (f64, f64), (x1, y1): (f64, f64)) -> f64 {
+fn div_diff_2<T>((x0, y0): (f64, T), (x1, y1): (f64, T)) -> T
+where
+    T: ops::Sub<T, Output = T> + ops::Div<f64, Output = T>,
+{
     (y1 - y0) / (x1 - x0)
 }
 
-fn div_diff_3((x0, y0): (f64, f64), (x1, y1): (f64, f64), (x2, y2): (f64, f64)) -> f64 {
+fn div_diff_3<T>((x0, y0): (f64, T), (x1, y1): (f64, T), (x2, y2): (f64, T)) -> T
+where
+    T: ops::Add<T, Output = T> + ops::Div<f64, Output = T>,
+{
     y0 / (x0 - x1) / (x0 - x2) + y1 / (x1 - x0) / (x1 - x2) + y2 / (x2 - x0) / (x2 - x1)
 }
 
-fn solve_tridiagonal(a: Vec<f64>, mut b: Vec<f64>, c: Vec<f64>, mut d: Vec<f64>) -> Vec<f64> {
+fn solve_tridiagonal<T>(a: Vec<f64>, mut b: Vec<f64>, c: Vec<f64>, mut d: Vec<T>) -> Vec<T>
+where
+    T: ops::Sub<T, Output = T>
+        + ops::SubAssign<T>
+        + ops::Mul<f64, Output = T>
+        + ops::Div<f64, Output = T>
+        + Copy,
+{
     let n = b.len();
     for i in 1..n {
         let w = a[i] / b[i - 1];
-        b[i] -= w * c[i - 1];
-        d[i] -= w * d[i - 1];
+        b[i] -= c[i - 1] * w;
+        let z = d[i - 1] * w;
+        d[i] -= z;
     }
     let mut result = vec![d[n - 1] / b[n - 1]];
     for i in (0..n - 1).rev() {
         let last_x = result[result.len() - 1];
-        result.push((d[i] - c[i] * last_x) / b[i]);
+        result.push((d[i] - last_x * c[i]) / b[i]);
     }
     result.reverse();
     result
