@@ -231,6 +231,14 @@ where
         }
     }
 
+    pub fn min_x(&self) -> f64 {
+        *self.points_x.first().unwrap()
+    }
+
+    pub fn max_x(&self) -> f64 {
+        *self.points_x.last().unwrap()
+    }
+
     pub fn derivative_start(&self) -> T {
         self.derivative_start
     }
