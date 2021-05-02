@@ -1,7 +1,10 @@
-use roots::{find_roots_cubic, Roots};
 use std::ops;
 
+use roots::{find_roots_cubic, Roots};
+use serde_derive::{Deserialize, Serialize};
+
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct CubicPoly<T> {
     a: T,
     b: T,
@@ -10,6 +13,7 @@ pub struct CubicPoly<T> {
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum Factors {
     /// f(x) = a(x-x1)(x-x2)(x-x3)
     ThreeLinear { a: f64, x1: f64, x2: f64, x3: f64 },

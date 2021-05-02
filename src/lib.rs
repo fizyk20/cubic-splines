@@ -6,7 +6,11 @@ use std::{iter, ops};
 pub use cubic_poly::CubicPoly;
 pub use zero::Zero;
 
+use serde_derive::{Deserialize, Serialize};
+
 /// Represents boundary conditions to be used for fitting a spline
+#[derive(Clone, Copy, Debug)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub enum BoundaryCondition<T> {
     /// Set derivatives at the initial and final points
     Derivatives(T, T),
@@ -21,6 +25,7 @@ pub enum BoundaryCondition<T> {
 
 /// A result of interpolation between a set of points
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serialization", derive(Serialize, Deserialize))]
 pub struct Spline<T> {
     points_x: Vec<f64>,
     splines: Vec<CubicPoly<T>>,
