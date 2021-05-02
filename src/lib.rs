@@ -6,6 +6,7 @@ use std::{iter, ops};
 pub use cubic_poly::CubicPoly;
 pub use zero::Zero;
 
+#[cfg(feature = "serialization")]
 use serde_derive::{Deserialize, Serialize};
 
 /// Represents boundary conditions to be used for fitting a spline
@@ -44,6 +45,7 @@ where
         + Copy
         + Zero,
 {
+    #[allow(clippy::many_single_char_names)]
     fn with_derivatives(points: Vec<(f64, T)>, d0: T, dn: T) -> Self {
         let n = points.len();
         let points_x: Vec<f64> = points.iter().map(|&(x, _)| x).collect();
@@ -102,6 +104,7 @@ where
         }
     }
 
+    #[allow(clippy::many_single_char_names)]
     fn with_second_derivatives(points: Vec<(f64, T)>, d0: T, dn: T) -> Self {
         let n = points.len();
         let points_x: Vec<f64> = points.iter().map(|&(x, _)| x).collect();
@@ -247,7 +250,7 @@ where
         self.derivative_end
     }
 
-    pub fn polynomials<'a>(&'a self) -> impl Iterator<Item = (f64, f64, CubicPoly<T>)> + 'a {
+    pub fn polynomials(&self) -> impl Iterator<Item = (f64, f64, CubicPoly<T>)> + '_ {
         self.points_x
             .windows(2)
             .zip(self.splines.iter())
@@ -269,6 +272,7 @@ where
     y0 / (x0 - x1) / (x0 - x2) + y1 / (x1 - x0) / (x1 - x2) + y2 / (x2 - x0) / (x2 - x1)
 }
 
+#[allow(clippy::many_single_char_names)]
 fn solve_tridiagonal<T>(a: Vec<f64>, mut b: Vec<f64>, c: Vec<f64>, mut d: Vec<T>) -> Vec<T>
 where
     T: ops::Sub<T, Output = T>

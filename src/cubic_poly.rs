@@ -1,6 +1,7 @@
 use std::ops;
 
 use roots::{find_roots_cubic, Roots};
+#[cfg(feature = "serialization")]
 use serde_derive::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -191,6 +192,7 @@ where
 }
 
 #[cfg(test)]
+#[allow(clippy::float_cmp)]
 mod tests {
     use super::{CubicPoly, Factors};
 
