@@ -3,6 +3,8 @@ name = "cubic-splines"
 version = "0.2.0"
 authors = ["Bartłomiej Kamiński <fizyk20@gmail.com>"]
 edition = "2018"
+description = "A crate for fitting cubic splines to datasets."
+license = "MIT"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
