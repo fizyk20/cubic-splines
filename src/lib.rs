@@ -3,7 +3,7 @@ mod zero;
 
 use std::{iter, ops};
 
-pub use cubic_poly::CubicPoly;
+pub use cubic_poly::{CubicPoly, Factors};
 pub use zero::Zero;
 
 #[cfg(feature = "serialization")]
